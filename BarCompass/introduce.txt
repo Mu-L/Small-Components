@@ -1,0 +1,8 @@
+[BarCompassWidget->Blueprint]
+CompassBar(Image)->Brush->M_CompassBar
+Marker(Image)->Brush->Marker
+
+if M_CompassBar Material loss
+first:Texture Sample:CompasssBar->output:RGB
+Second:Texture Sample:CompassBarMask->output:1-x
+
