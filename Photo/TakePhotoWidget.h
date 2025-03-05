@@ -25,6 +25,12 @@ class DEMO_API UTakePhotoWidget : public UCommonUserWidget
     TObjectPtr< UEditableTextBox> ResY;
 
     UPROPERTY(meta = (BindWidget))
+    TObjectPtr< UEditableTextBox> Path;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr< UEditableTextBox> Name;
+
+    UPROPERTY(meta = (BindWidget))
     TObjectPtr <UButton> TakePhoto;
 
     UFUNCTION(BlueprintCallable)
