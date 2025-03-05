@@ -7,7 +7,7 @@
 #include "Components/ComboBoxString.h"
 #include "Components/CheckBox.h"
 #include"Components/Button.h"
-#include "ViewSettingsStruct.h"
+
 #include "CommonDisplaySettings.generated.h"
 
 // 定义质量等级枚举
@@ -38,10 +38,6 @@ public:
 	//用户设置
 	UPROPERTY()
 	TObjectPtr<UGameUserSettings>GameUserSettings;
-
-	//默认设置
-	UPROPERTY()
-	FViewSettingsStruct DefaultViewSettings;
 
 	//分辨率
 	UPROPERTY()
