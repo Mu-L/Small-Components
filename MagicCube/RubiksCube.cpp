@@ -12,7 +12,7 @@ ARubiksCube::ARubiksCube()
 
     // 加载立方体网格资源
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshFinder(
-        TEXT("/Engine/BasicShapes/Cube"));
+        TEXT("/Script/Engine.StaticMesh'/Game/Test/MagicCube.MagicCube'"));
     if (MeshFinder.Succeeded())
     {
         CubeMesh = MeshFinder.Object;
@@ -27,6 +27,9 @@ void ARubiksCube::BeginPlay()
 {
     Super::BeginPlay();
     InitializeCubes();
+
+    // 游戏开始时自动打乱（开发者可注释此行）
+    ScrambleCube(25,true);
 }
 
 void ARubiksCube::InitializeCubes()
@@ -48,7 +51,7 @@ void ARubiksCube::InitializeCubes()
                 // 设置初始位置和缩放
                 NewCube.LogicalPos = FIntVector(x, y, z);
                 NewCube.Mesh->SetRelativeLocation(LogicalToWorld(NewCube.LogicalPos));
-                NewCube.Mesh->SetRelativeScale3D(FVector(0.95f));
+                NewCube.Mesh->SetRelativeScale3D(FVector(0.5f));
 
                 Cubes.Add(NewCube);
             }
@@ -78,9 +81,24 @@ FIntVector ARubiksCube::WorldToLogical(FVector WorldPos) const
 
 void ARubiksCube::StartRotation(FIntVector LayerCenter, bool bClockwise)
 {
-    if (bIsRotating) return;
+   /* if (bIsRotating) return;
     CalculateRotationParams(LayerCenter, bClockwise);
-    bIsRotating = true;
+    bIsRotating = true;*/
+
+    if (bIsRotating) return;
+
+    // 重置旋转状态
+    CurrentRotation = FRotationData();
+    CalculateRotationParams(LayerCenter, bClockwise);
+
+    // 立即完成模式（用于打乱）
+    if (!IsInGameThread() || GetWorld()->IsPreviewWorld()) {
+        CurrentRotation.CurrentAngle = CurrentRotation.TargetAngle;
+        FinalizeRotation();
+    }
+    else {
+        bIsRotating = true;
+    }
 }
 
 void ARubiksCube::CalculateRotationParams(FIntVector LayerCenter, bool bClockwise)
@@ -209,5 +227,83 @@ void ARubiksCube::FinalizeRotation()
         NormalizedRot.Roll = FMath::GridSnap(NormalizedRot.Roll, 90.0f);
         Cube.Mesh->SetWorldRotation(NormalizedRot);
         Cube.CurrentRotation = NormalizedRot;
+    }
+
+    // 验证代码（开发时使用）
+#if WITH_EDITOR
+    for (const FCubeData& Cube : Cubes) {
+        FVector ActualPos = Cube.Mesh->GetComponentLocation();
+        FIntVector CalcLogical = WorldToLogical(ActualPos);
+
+        // 确保坐标在0-2范围内
+        checkf(CalcLogical.X >= 0 && CalcLogical.X <= 2,
+            TEXT("Invalid logical X position!"));
+        checkf(CalcLogical.Y >= 0 && CalcLogical.Y <= 2,
+            TEXT("Invalid logical Y position!"));
+        checkf(CalcLogical.Z >= 0 && CalcLogical.Z <= 2,
+            TEXT("Invalid logical Z position!"));
+    }
+#endif
+}
+
+// 新增函数实现
+TArray<FIntVector> ARubiksCube::GetAllPossibleLayers() const
+{
+    // 所有可旋转的层中心坐标
+    return {
+        FIntVector(0,1,1), // 左层
+        FIntVector(2,1,1), // 右层
+        FIntVector(1,0,1), // 底层
+        FIntVector(1,2,1), // 顶层
+        FIntVector(1,1,0), // 前层
+        FIntVector(1,1,2)  // 后层
+    };
+}
+
+TArray<TTuple<FIntVector, bool>> ARubiksCube::GenerateScrambleSequence(int32 NumMoves)
+{
+    TArray<TTuple<FIntVector, bool>> Sequence;
+    const TArray<FIntVector> PossibleLayers = GetAllPossibleLayers();
+    FIntVector LastLayer = FIntVector::NoneValue;
+
+    for (int32 i = 0; i < NumMoves; i++) {
+        // 随机选择层（避免连续相同层）
+        FIntVector SelectedLayer;
+        do {
+            SelectedLayer = PossibleLayers[FMath::RandRange(0, PossibleLayers.Num() - 1)];
+        } while (SelectedLayer == LastLayer);
+
+        // 随机旋转方向
+        bool bClockwise = FMath::RandBool();
+
+        // 避免无意义旋转组合（如连续相反方向旋转同一层）
+        if (i > 0 && Sequence.Last().Get<0>() == SelectedLayer) {
+            bClockwise = !Sequence.Last().Get<1>();
+        }
+        else {
+            LastLayer = SelectedLayer;
+            Sequence.Emplace(SelectedLayer, bClockwise);
+        }
+    }
+    return Sequence;
+}
+
+void ARubiksCube::ScrambleCube(int32 ScrambleMoves, bool bWithAnimation = true)
+{
+    const TArray<TTuple<FIntVector, bool>> ScrambleSequence = GenerateScrambleSequence(ScrambleMoves);
+
+    for (const auto& Move : ScrambleSequence) {
+        StartRotation(Move.Get<0>(), Move.Get<1>());
+        if (bWithAnimation) {
+            // 等待动画完成
+            while (bIsRotating) {
+                Tick(0.016f); // 模拟帧更新
+            }
+        }
+        else {
+            // 立即完成
+            CurrentRotation.CurrentAngle = CurrentRotation.TargetAngle;
+            FinalizeRotation();
+        }
     }
 }

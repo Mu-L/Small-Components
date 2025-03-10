@@ -50,4 +50,11 @@ private:
     void CalculateRotationParams(FIntVector LayerCenter, bool bClockwise);
     bool IsInRotationLayer(const FVector& CubeWorldPos, FIntVector LayerCenter) const;
     void FinalizeRotation();
+
+private:
+    // ¥Ú¬“œ‡πÿ
+    UFUNCTION(BlueprintCallable)
+    void ScrambleCube(int32 ScrambleMoves = 25, bool bWithAnimation = true);
+    TArray<TTuple<FIntVector, bool>> GenerateScrambleSequence(int32 NumMoves);
+    TArray<FIntVector> GetAllPossibleLayers() const;
 };
