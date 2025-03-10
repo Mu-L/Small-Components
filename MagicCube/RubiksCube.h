@@ -16,6 +16,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void StartRotation(FIntVector LayerCenter, bool bClockwise);
 
+    UFUNCTION(BlueprintCallable)
+    void ScrambleCube(int32 ScrambleMoves, bool bWithAnimation);
+
 protected:
     virtual void BeginPlay() override;
 
@@ -53,8 +56,15 @@ private:
 
 private:
     // 打乱相关
-    UFUNCTION(BlueprintCallable)
-    void ScrambleCube(int32 ScrambleMoves = 25, bool bWithAnimation = true);
     TArray<TTuple<FIntVector, bool>> GenerateScrambleSequence(int32 NumMoves);
     TArray<FIntVector> GetAllPossibleLayers() const;
+
+    // 在私有成员部分添加
+private:
+    UFUNCTION(BlueprintCallable)
+    int32 HideIdenticalRotatedCubes(FIntVector LayerCenter);
+
+    // 辅助函数
+    TArray<FIntVector> GetAdjacentLayer(FIntVector LayerCenter) const;
+    TArray<int32> FindConnectedCubes(int32 StartIndex, const TArray<int32>& LayerIndices) const;
 };

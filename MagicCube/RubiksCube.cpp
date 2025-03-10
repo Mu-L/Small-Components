@@ -228,6 +228,11 @@ void ARubiksCube::FinalizeRotation()
         Cube.Mesh->SetWorldRotation(NormalizedRot);
         Cube.CurrentRotation = NormalizedRot;
     }
+    // 新增隐藏逻辑
+    if (CurrentRotation.AffectedIndices.Num() > 0)
+    {
+       //HideIdenticalRotatedCubes(CurrentRotation.LayerCenter);
+    }
 
     // 验证代码（开发时使用）
 #if WITH_EDITOR
@@ -288,7 +293,7 @@ TArray<TTuple<FIntVector, bool>> ARubiksCube::GenerateScrambleSequence(int32 Num
     return Sequence;
 }
 
-void ARubiksCube::ScrambleCube(int32 ScrambleMoves, bool bWithAnimation = true)
+void ARubiksCube::ScrambleCube(int32 ScrambleMoves, bool bWithAnimation)
 {
     const TArray<TTuple<FIntVector, bool>> ScrambleSequence = GenerateScrambleSequence(ScrambleMoves);
 
@@ -306,4 +311,156 @@ void ARubiksCube::ScrambleCube(int32 ScrambleMoves, bool bWithAnimation = true)
             FinalizeRotation();
         }
     }
+}
+
+int32 ARubiksCube::HideIdenticalRotatedCubes(FIntVector LayerCenter)
+{
+    // 步骤1：获取所有位于相邻层的唯一立方体索引
+    TArray<FIntVector> AdjacentLayers = GetAdjacentLayer(LayerCenter);
+    TSet<int32> UniqueIndices;
+
+    // lambda：判断某个逻辑坐标是否匹配任一相邻层
+    auto MatchesAdjacentLayer = [&](const FIntVector& CubePos) -> bool {
+        for (const FIntVector& AdjLayer : AdjacentLayers)
+        {
+            if ((AdjLayer.X != -1 && CubePos.X == AdjLayer.X) ||
+                (AdjLayer.Y != -1 && CubePos.Y == AdjLayer.Y) ||
+                (AdjLayer.Z != -1 && CubePos.Z == AdjLayer.Z))
+            {
+                return true;
+            }
+        }
+        return false;
+        };
+
+    for (int32 i = 0; i < Cubes.Num(); i++)
+    {
+        if (MatchesAdjacentLayer(Cubes[i].LogicalPos))
+        {
+            UniqueIndices.Add(i);
+        }
+    }
+
+    // 步骤2：遍历唯一索引集合，对每个连通区域只隐藏一次
+    TSet<int32> ProcessedIndices;
+    int32 TotalHiddenCount = 0;
+    TArray<int32> UniqueIndicesArray = UniqueIndices.Array();
+
+    for (int32 Index : UniqueIndicesArray)
+    {
+        if (ProcessedIndices.Contains(Index))
+        {
+            continue;
+        }
+
+        // 查找与该索引连通且旋转一致的区域
+        TArray<int32> Connected = FindConnectedCubes(Index, UniqueIndicesArray);
+        if (Connected.Num() >= 2)
+        {
+            int32 GroupHiddenCount = 0;
+            for (int32 ConnectedIndex : Connected)
+            {
+                // 仅隐藏当前依然可见的正方体
+                if (Cubes[ConnectedIndex].Mesh->IsVisible())
+                {
+                    Cubes[ConnectedIndex].Mesh->SetVisibility(false);
+                    GroupHiddenCount++;
+                }
+            }
+            if (GroupHiddenCount > 0)
+            {
+                UE_LOG(LogTemp, Log, TEXT("Hidden %d cubes with identical rotations"), GroupHiddenCount);
+                TotalHiddenCount += GroupHiddenCount;
+            }
+            ProcessedIndices.Append(Connected);
+        }
+    }
+
+    return TotalHiddenCount;
+}
+
+TArray<FIntVector> ARubiksCube::GetAdjacentLayer(FIntVector LayerCenter) const
+{
+    TArray<FIntVector> AdjacentLayers;
+
+    // 根据旋转轴确定相邻层坐标
+    if (LayerCenter.X == 0 || LayerCenter.X == 2)
+    {
+        // 对于X轴层，认为“同Y层”或“同Z层”算作相邻
+        AdjacentLayers.Add(FIntVector(-1, LayerCenter.Y, -1)); // 表示匹配 Y 坐标
+        AdjacentLayers.Add(FIntVector(-1, -1, LayerCenter.Z)); // 表示匹配 Z 坐标
+    }
+    else if (LayerCenter.Y == 0 || LayerCenter.Y == 2)
+    {
+        AdjacentLayers.Add(FIntVector(LayerCenter.X, -1, -1)); // 匹配 X 坐标
+        AdjacentLayers.Add(FIntVector(-1, -1, LayerCenter.Z)); // 匹配 Z 坐标
+    }
+    else if (LayerCenter.Z == 0 || LayerCenter.Z == 2)
+    {
+        AdjacentLayers.Add(FIntVector(LayerCenter.X, -1, -1)); // 匹配 X 坐标
+        AdjacentLayers.Add(FIntVector(-1, LayerCenter.Y, -1)); // 匹配 Y 坐标
+    }
+
+    // 过滤掉无效的全部为 -1 的值（理论上不会出现）
+    AdjacentLayers.RemoveAll([](const FIntVector& Vec) {
+        return Vec.X == -1 && Vec.Y == -1 && Vec.Z == -1;
+        });
+
+    return AdjacentLayers;
+}
+
+TArray<int32> ARubiksCube::FindConnectedCubes(int32 StartIndex, const TArray<int32>& LayerIndices) const
+{
+    TArray<int32> Connected;
+    TArray<int32> ToCheck;
+    const FRotator BaseRotation = Cubes[StartIndex].CurrentRotation;
+
+    ToCheck.Add(StartIndex);
+
+    // 洪水填充算法：遍历所有相邻且旋转一致的立方体
+    while (ToCheck.Num() > 0)
+    {
+        int32 CurrentIndex = ToCheck.Pop();
+        if (Connected.Contains(CurrentIndex))
+        {
+            continue;
+        }
+
+        Connected.Add(CurrentIndex);
+        FIntVector CurrentPos = Cubes[CurrentIndex].LogicalPos;
+
+        // 定义6个相邻方向
+        const TArray<FIntVector> Directions = {
+            FIntVector(1, 0, 0),
+            FIntVector(-1, 0, 0),
+            FIntVector(0, 1, 0),
+            FIntVector(0, -1, 0),
+            FIntVector(0, 0, 1),
+            FIntVector(0, 0, -1)
+        };
+
+        for (const FIntVector& Dir : Directions)
+        {
+            FIntVector NeighborPos = CurrentPos + Dir;
+            // 在传入的 LayerIndices 内查找满足逻辑坐标、旋转一致且未处理的正方体
+            for (int32 OtherIndex : LayerIndices)
+            {
+                if (Cubes[OtherIndex].LogicalPos == NeighborPos &&
+                    Cubes[OtherIndex].CurrentRotation.Equals(BaseRotation) &&
+                    !Connected.Contains(OtherIndex))
+                {
+                    ToCheck.Add(OtherIndex);
+                }
+            }
+        }
+        // 可选：调试绘制当前处理的正方体位置
+        DrawDebugBox(GetWorld(),
+            Cubes[CurrentIndex].Mesh->GetComponentLocation(),
+            FVector(50),
+            FColor::Red,
+            false,
+            2.0f);
+    }
+
+    return Connected;
 }
