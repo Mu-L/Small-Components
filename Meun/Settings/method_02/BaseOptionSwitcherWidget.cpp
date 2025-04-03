@@ -26,6 +26,7 @@ void UBaseOptionSwitcherWidget::UpdateDisplay()
     {
         const FString LevelStr = StaticEnum<EQualityLevel>()->GetDisplayNameTextByValue((int64)QualityLevels[CurrentIndex]).ToString();
         OptionText->SetText(FText::FromString(LevelStr));
+        OnOptionChanged.Broadcast(QualityLevels[CurrentIndex]);
     }
 }
 
@@ -42,3 +43,4 @@ void UBaseOptionSwitcherWidget::SetCurrentLevel(EQualityLevel NewLevel)
         UE_LOG(LogTemp, Warning, TEXT("Invalid quality level: %d"), static_cast<int32>(NewLevel));
     }
 }
+

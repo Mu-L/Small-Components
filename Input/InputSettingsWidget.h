@@ -2,7 +2,7 @@
 
 #include "CommonUserWidget.h"
 #include "Components/ScrollBox.h"
-#include "KeySettingsWidget.h" // Ìí¼Ó°üº¬
+#include "KeySettingsWidget.h" 
 #include "InputSettingsWidget.generated.h"
 
 UCLASS()
@@ -13,6 +13,8 @@ class UInputSettingsWidget : public UCommonUserWidget
 public:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UScrollBox> ScrollBox;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI Settings")
+	TSubclassOf<UKeySettingsWidget> KeySettingsWidgetClass;
 
 	UPROPERTY(BlueprintReadWrite)
 	class UEnhancedInputUserSettings* InputUserSettings;

@@ -32,11 +32,13 @@ void UKeySettingsWidget::OnKeySelected(FInputChord SelectedKey)
 		FKey NewKey = SelectedKey.Key;
 		FMapPlayerKeyArgs InArgs;
 		InArgs.MappingName = KeyMapping.GetMappingName();
+		InArgs.Slot= EPlayerMappableKeySlot::First;
 		InArgs.NewKey = NewKey;
 		FGameplayTagContainer FailureReason;
 		InputUserSettings->MapPlayerKey(InArgs, FailureReason);
 		InputUserSettings->ApplySettings();
 		InputUserSettings->SaveSettings();
+		//UE_LOG(LogTemp, Error, TEXT("OnKeySelected!"));
 	}
 
 }
@@ -44,16 +46,19 @@ void UKeySettingsWidget::OnKeySelected(FInputChord SelectedKey)
 void UKeySettingsWidget::OnIsSelectingKeyChanged()
 {
 	bIsKeyChanged = true;
+	//UE_LOG(LogTemp, Error, TEXT("OnIsSelectingKeyChanged!"));
 }
 
 void UKeySettingsWidget::OnResetClicked()
 {
 	FMapPlayerKeyArgs InArgs;
 	InArgs.MappingName = KeyMapping.GetMappingName();
+	InArgs.Slot = EPlayerMappableKeySlot::First;
 	InArgs.NewKey = KeyMapping.GetDefaultKey();
 	FGameplayTagContainer FailureReason;
 	InputUserSettings->MapPlayerKey(InArgs,FailureReason);
 	InputUserSettings->ApplySettings();
 	InputUserSettings->SaveSettings();
 	UpdateInputKeySeletorbyKeyMapping(KeyMapping.GetDefaultKey());
+	//UE_LOG(LogTemp, Error, TEXT("OnResetClicked!"));
 }

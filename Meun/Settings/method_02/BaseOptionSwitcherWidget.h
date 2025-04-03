@@ -6,6 +6,8 @@
 #include"Components/TextBlock.h"
 #include "BaseOptionSwitcherWidget.generated.h"
 
+
+
 UENUM(BlueprintType)
 enum class EQualityLevel : uint8
 {
@@ -15,7 +17,7 @@ enum class EQualityLevel : uint8
     Epic,
     Cinematic
 };
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOptionChanged, EQualityLevel, NewLevel);
 UCLASS()
 class UBaseOptionSwitcherWidget : public UCommonUserWidget
 {
@@ -49,6 +51,7 @@ protected:
     UFUNCTION()
     void OnRightClicked();
 
+   
     void UpdateDisplay();
 
 public:
@@ -56,4 +59,8 @@ public:
 public:
     // 增加初始化验证
     void SetCurrentLevel(EQualityLevel NewLevel);
+    
+public:
+    UPROPERTY(BlueprintAssignable)
+    FOnOptionChanged OnOptionChanged;
 };

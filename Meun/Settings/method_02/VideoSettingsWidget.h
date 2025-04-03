@@ -15,6 +15,9 @@ protected:
     virtual void NativeConstruct() override;
 public:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    TObjectPtr<UBaseOptionSwitcherWidget> QuickSetQualitySwitcher;
+
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UBaseOptionSwitcherWidget> ShadowQualitySwitcher;
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -57,7 +60,8 @@ public:
     UFUNCTION(BlueprintCallable)
     void RestoreDefaults();
 
-
+    UFUNCTION(BlueprintCallable)
+    void OnQuickSetChanged(EQualityLevel NewLevel);
 
 private:
     // ·Ö±æÂÊ»º´æ

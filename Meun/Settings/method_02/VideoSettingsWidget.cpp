@@ -13,6 +13,10 @@ void UVideoSettingsWidget::NativeConstruct()
         return static_cast<EQualityLevel>(FMath::Clamp(EngineValue, 0, 4));
         };
 
+    // 初始化快速设置
+    QuickSetQualitySwitcher->SetCurrentLevel(EQualityLevel::Medium); // 默认值
+    QuickSetQualitySwitcher->OnOptionChanged.AddDynamic(this, &UVideoSettingsWidget::OnQuickSetChanged);
+
     // 初始化各选项控件
     ShadowQualitySwitcher->SetCurrentLevel(ConvertScalability(UserSettings->GetShadowQuality()));//阴影质量
     VisualEffectsSwitcher->SetCurrentLevel(ConvertScalability(UserSettings->GetVisualEffectQuality()));//视觉效果
@@ -52,6 +56,8 @@ void UVideoSettingsWidget::NativeConstruct()
     FrameRateDropdown->SetSelectedOption(CurrentFrameRateStr);
 }
 
+
+
 void UVideoSettingsWidget::SaveSettings()
 {
     // 应用设置
@@ -89,12 +95,12 @@ void UVideoSettingsWidget::SaveSettings()
     UserSettings->SetFrameRateLimit(NewFrameRate);
 
     UserSettings->ApplySettings(false);
-    UserSettings->SaveSettings();
 }
 
 void UVideoSettingsWidget::RestoreDefaults()
 {
     // 重置为默认值
+    QuickSetQualitySwitcher->SetCurrentLevel(EQualityLevel::Medium);
     ShadowQualitySwitcher->SetCurrentLevel(EQualityLevel::Medium);
     VisualEffectsSwitcher->SetCurrentLevel(EQualityLevel::Medium);
     PostProcessingSwitcher->SetCurrentLevel(EQualityLevel::Medium);
@@ -114,7 +120,21 @@ void UVideoSettingsWidget::RestoreDefaults()
 
     // 重置帧率为60
     FrameRateDropdown->SetSelectedOption("60");
+   
     SaveSettings();
  
 }
 
+void UVideoSettingsWidget::OnQuickSetChanged(EQualityLevel NewLevel)
+{
+    // 同步所有画质选项到快速设置的等级
+    ShadowQualitySwitcher->SetCurrentLevel(NewLevel);
+    VisualEffectsSwitcher->SetCurrentLevel(NewLevel);
+    PostProcessingSwitcher->SetCurrentLevel(NewLevel);
+    FoliageQualitySwitcher->SetCurrentLevel(NewLevel);
+    ShadingQualitySwitcher->SetCurrentLevel(NewLevel);
+    GlobalIlluminationQualitySwitcher->SetCurrentLevel(NewLevel);
+    AntiAliasingQualitySwitcher->SetCurrentLevel(NewLevel);
+    ReflectionQualitySwitcher->SetCurrentLevel(NewLevel);
+    TextureQualitySwitcher->SetCurrentLevel(NewLevel);
+}

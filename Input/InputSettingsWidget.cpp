@@ -2,6 +2,7 @@
 #include "GameFramework/PlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include"Kismet/KismetSystemLibrary.h"
 
 void UInputSettingsWidget::NativeConstruct()
 {
@@ -17,14 +18,8 @@ void UInputSettingsWidget::NativeConstruct()
 			}
 		}
 	}
-    if (InputUserSettings)
+    if (InputUserSettings && KeySettingsWidgetClass)
     {
-        // 加载控件类（注意需要添加_C后缀）
-        static TSubclassOf<UKeySettingsWidget> WidgetClass = LoadClass<UKeySettingsWidget>(
-            nullptr,
-            TEXT("/Game/HUD/SettingMeun/Keyboard/WBP_KeySettings_Test.WBP_KeySettings_Test_C")
-        );
-
         TMap<FName, FKeyMappingRow> MappingRows = InputUserSettings->GetCurrentKeyProfile()->GetPlayerMappingRows();
 
         for (const auto& MapEntry : MappingRows)
@@ -35,23 +30,29 @@ void UInputSettingsWidget::NativeConstruct()
             {
                 if (PlayerMapping.GetSlot() == EPlayerMappableKeySlot::First)
                 {
+                    FLatentActionInfo LatentInfo;
+                    UKismetSystemLibrary::Delay(GetWorld(),0.1f,LatentInfo);
                     // 创建控件实例
-                    if (UKeySettingsWidget* KeyWidget = CreateWidget<UKeySettingsWidget>(this, WidgetClass))
+                    if (UKeySettingsWidget* KeyWidget = CreateWidget<UKeySettingsWidget>(this, KeySettingsWidgetClass))
                     {
-                        // 设置ExposeOnSpawn参数
+                        // 传递参数
                         KeyWidget->InputUserSettings = InputUserSettings;
                         KeyWidget->KeyMapping = PlayerMapping;
 
-                        // 添加到ScrollBox
+                        // 添加到滚动框
                         ScrollBox->AddChild(KeyWidget);
 
-                        UE_LOG(LogTemp, Warning, TEXT("Created widget for mapping: %s"),
+                        UE_LOG(LogTemp, Log, TEXT("Created widget for: %s"),
                             *PlayerMapping.GetMappingName().ToString());
                     }
-                    break;
+                    break; // 每行只创建一个控件
                 }
             }
         }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Missing KeySettingsWidgetClass or InputUserSettings!"));
     }
 }
 

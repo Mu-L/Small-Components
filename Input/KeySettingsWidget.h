@@ -30,8 +30,11 @@ public:
     UEnhancedInputUserSettings* InputUserSettings;
 protected:
     void UpdateInputKeySeletorbyKeyMapping(FKey Key);
+    UFUNCTION()
     void OnKeySelected(FInputChord SelectedKey);
+    UFUNCTION()
     void OnIsSelectingKeyChanged();
+    UFUNCTION()
     void OnResetClicked();
 private:
     bool bIsKeyChanged;
